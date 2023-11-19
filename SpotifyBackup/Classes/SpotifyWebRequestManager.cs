@@ -27,7 +27,7 @@ namespace SpotifyPlaylistBackup.Classes
             var trackIdList = trackIds.ToList();
             if(trackIdList.Count() > 50)
             {
-                return tracks;
+                throw new Exception("cannot handle more thant 50 tracks");
             }
 
             var client = new HttpClient();
@@ -43,17 +43,25 @@ namespace SpotifyPlaylistBackup.Classes
             var response = await client.SendAsync(test);
             var json = await response.Content.ReadAsStringAsync();
 
-            var parsedJson = JObject.Parse(json);
-            var tracksArray = (JArray)parsedJson["tracks"];
-            tracks = tracksArray
-                .Select(track => new Track() {
-                    Song = track["name"].ToString(),
-                    Artist = string.Join(",", track["artists"]
-                        .Select(artist => artist["name"].ToString())
-                    ),//.Aggregate("",(curr, next) => curr = curr + ", " + next),
+            try
+            {
+                var parsedJson = JObject.Parse(json);
+                var tracksArray = (JArray)parsedJson["tracks"];
+                tracks = tracksArray
+                    .Select(track => new Track()
+                    {
+                        Song = track["name"].ToString(),
+                        Artist = string.Join(",", track["artists"]
+                            .Select(artist => artist["name"].ToString())
+                        ),//.Aggregate("",(curr, next) => curr = curr + ", " + next),
                     Album = track["album"]["name"].ToString()
-                })
-                .ToList();
+                    })
+                    .ToList();
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine($"Error getting track ids {trackIdList}");
+            }
 
             return tracks;
         }

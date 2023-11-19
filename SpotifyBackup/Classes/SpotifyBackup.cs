@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Net.Http;
 using System.Text;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace SpotifyPlaylistBackup.Classes
@@ -15,8 +16,27 @@ namespace SpotifyPlaylistBackup.Classes
         }
 
         public async Task<List<Track>> GetTracks(IEnumerable<string> trackIds) {
-            var tracks = await SWRManager.GetTracks(trackIds);
-            return tracks;
+            var trackIdsCount = trackIds.Count();
+            var trackList = new List<Track>();
+
+            if(trackIdsCount > MAX_TRACK_COUNT)
+            {
+                var batches = trackIds
+                    .Select((track, index) => new { track, index })
+                    .GroupBy(track => track.index / MAX_TRACK_COUNT)
+                    .Select(group => group.Select(el => el.track));
+                foreach(var batch in batches)
+                {
+                    trackList.AddRange(await SWRManager.GetTracks(batch));
+                    Console.WriteLine($"requested {MAX_TRACK_COUNT} tracks");
+                }
+            }
+            // nécessaire ?
+            else
+            {
+                trackList = await SWRManager.GetTracks(trackIds);
+            }
+            return trackList;
         }
 
 
@@ -46,6 +66,7 @@ namespace SpotifyPlaylistBackup.Classes
             return accesToken;
         }
 
+        const int MAX_TRACK_COUNT = 50;
         private readonly SpotifyWebRequestManager SWRManager;
     }
 }
